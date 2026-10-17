@@ -1,5 +1,5 @@
 
-name: Build Android APK
+name: Build PSShop Today APK
 
 on:
   workflow_dispatch:
@@ -21,152 +21,17 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Create Android project
+      - name: Extract new project
         run: |
-          mkdir -p app/src/main/java/com/psshop/app
-          mkdir -p app/src/main/res/values
-          cat > settings.gradle <<'EOF'
-          pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          rootProject.name = "PSShop"
-          include ':app'
-          EOF
-          cat > build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application' version '8.6.1' apply false
-          }
-          EOF
-          cat > app/build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application'
-          }
-          android {
-              namespace 'com.psshop.app'
-              compileSdk 35
-              defaultConfig {
-                  applicationId 'com.psshop.app'
-                  minSdk 23
-                  targetSdk 28
-                  versionCode 1
-                  versionName '1.0'
-              }
-          }
-          EOF
-          cat > app/src/main/AndroidManifest.xml <<'EOF'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <application
-                  android:theme="@android:style/Theme.Material.Light.NoActionBar"
-                  android:label="إدارة محل البلايستيشن"
-                  android:usesCleartextTraffic="true">
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN"/>
-                          <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
-          cat > app/src/main/java/com/psshop/app/MainActivity.java <<'EOF'
-          package com.psshop.app;
+          unzip -q PSShop_Today_Project-1.zip -d source
+          test -f source/PSShop_Today_Project/app/build.gradle
 
-          import android.app.*;
-          import android.os.*;
-          import android.graphics.Color;
-          import android.view.Gravity;
-          import android.widget.*;
-
-          public class MainActivity extends Activity {
-              int seconds = 780;
-              TextView clock;
-              Handler handler = new Handler();
-              Runnable timer;
-              public void onCreate(Bundle b) {
-                  super.onCreate(b);
-                  LinearLayout layout = new LinearLayout(this);
-                  layout.setOrientation(1);
-                  layout.setPadding(24,40,24,24);
-                  layout.setGravity(Gravity.CENTER_HORIZONTAL);
-                  layout.setBackgroundColor(Color.WHITE);
-                  TextView title = new TextView(this);
-                  title.setText("إدارة محل البلايستيشن");
-                  title.setTextSize(25);
-                  title.setTextColor(Color.BLACK);
-                  layout.addView(title);
-                  TextView info = new TextView(this);
-                  info.setText("نسخة البداية - مؤقت المباراة");
-                  info.setTextSize(18);
-                  layout.addView(info);
-                  clock = new TextView(this);
-                  clock.setTextSize(42);
-                  clock.setTextColor(Color.BLACK);
-                  clock.setGravity(Gravity.CENTER);
-                  layout.addView(clock);
-                  Button start = new Button(this);
-                  start.setText("بدء المباراة (13 دقيقة)");
-                  layout.addView(start);
-                  Button reset = new Button(this);
-                  reset.setText("إعادة المؤقت");
-                  layout.addView(reset);
-                  timer = new Runnable() {
-                      public void run() {
-                          if(seconds > 0) {
-                              seconds--;
-                              update();
-                              handler.postDelayed(this,1000);
-                          } else {
-                              clock.setText("انتهى الوقت!");
-                              android.media.ToneGenerator tone =
-                                  new android.media.ToneGenerator(
-                                      android.media.AudioManager.STREAM_ALARM,100);
-                              tone.startTone(android.media.ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD,1500);
-                              ((android.os.Vibrator)getSystemService(VIBRATOR_SERVICE))
-                                  .vibrate(700);
-                          }
-                      }
-                  };
-                  start.setOnClickListener(v -> {
-                      handler.removeCallbacks(timer);
-                      if(seconds == 0) seconds = 780;
-                      handler.post(timer);
-                  });
-                  reset.setOnClickListener(v -> {
-                      handler.removeCallbacks(timer);
-                      seconds = 780;
-                      update();
-                  });
-                  setContentView(layout);
-                  update();
-              }
-              void update() {
-                  clock.setText(String.format(java.util.Locale.US,
-                      "%02d:%02d",seconds/60,seconds%60));
-              }
-              protected void onDestroy() {
-                  handler.removeCallbacks(timer);
-                  super.onDestroy();
-              }
-          }
-          EOF
-
-      - name: Build APK
-        run: gradle assembleDebug
+      - name: Build new APK
+        run: |
+          cd source/PSShop_Today_Project
+          gradle assembleDebug
 
       - uses: actions/upload-artifact@v4
         with:
-          name: PSShop-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: PSShop-Today-APK
+          path: source/PSShop_Today_Project/app/build/outputs/apk/debug/app-debug.apk
